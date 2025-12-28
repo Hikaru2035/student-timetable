@@ -1,149 +1,187 @@
-import { useEffect, useState } from "react";
+import { Navbar } from './components/Navbar';
+import { TaskTable } from './components/TaskTable';
+import { ActionButtons } from './components/ActionButtons';
+import { AddTaskDialog } from './components/AddTaskDialog';
+import { UpdateTaskDialog } from './components/UpdateTaskDialog';
+import { Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import './App.css';
 
-const API = "http://172.16.220.86:3000/api/todos";
+const API_BASE_URL = 'http://192.168.1.34:3001/api/tasks';
 
-function App() {
-  const [todos, setTodos] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-
-  const [form, setForm] = useState({
-    task: "",
-    deadline: "",
-    status: "todo"
-  });
+export default function App() {
+  const [tasks, setTasks] = useState([]);
+  const [selectedTaskIds, setSelectedTaskIds] = useState([]);
+  const [currentView, setCurrentView] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetch(API)
+    fetch(API_BASE_URL)
       .then(res => res.json())
-      .then(setTodos);
+      .then(data => setTasks(data))
+      .catch(err => console.error('Fetch tasks failed:', err));
   }, []);
 
-  const openAdd = () => {
-    setSelected(null);
-    setForm({ task: "", deadline: "", status: "todo" });
-    setShowModal(true);
-  };
+  const filteredTasks = tasks.filter(task => {
+    const matchesView =
+      currentView === 'all'
+        ? true
+        : currentView === 'done'
+        ? task.status === 'done'
+        : task.status === 'todo';
 
-  const openEdit = (todo) => {
-    setSelected(todo);
-    setForm(todo);
-    setShowModal(true);
-  };
+    const matchesSearch = task.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
 
-  const submit = async () => {
-    if (selected) {
-      const res = await fetch(`${API}/${selected.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+    return matchesView && matchesSearch;
+  });
+
+  const handleAddTask = async (task) => {
+    try {
+      const res = await fetch(API_BASE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(task),
       });
-      const updated = await res.json();
-      setTodos(todos.map(t => t.id === updated.id ? updated : t));
-    } else {
-      const res = await fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
-      });
-      const created = await res.json();
-      setTodos([...todos, created]);
+
+      const newTask = await res.json();
+      setTasks(prev => [...prev, newTask]);
+      setIsAddDialogOpen(false);
+    } catch (err) {
+      console.error('Add task failed:', err);
     }
-    setShowModal(false);
   };
 
-  const remove = async (id) => {
-    await fetch(`${API}/${id}`, { method: "DELETE" });
-    setTodos(todos.filter(t => t.id !== id));
-    setShowModal(false);
+  const handleUpdateTask = async (updatedTask) => {
+    if (selectedTaskIds.length !== 1) return;
+
+    const taskId = selectedTaskIds[0];
+
+    try {
+      await fetch(`${API_BASE_URL}/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedTask),
+      });
+
+      setTasks(tasks.map(task =>
+        task.id === taskId
+          ? { ...task, ...updatedTask }
+          : task
+      ));
+
+      setSelectedTaskIds([]);
+      setIsUpdateDialogOpen(false);
+    } catch (err) {
+      console.error('Update task failed:', err);
+    }
   };
+
+  const handleDeleteTasks = async () => {
+    try {
+      await fetch(API_BASE_URL, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedTaskIds }),
+      });
+
+      setTasks(tasks.filter(task => !selectedTaskIds.includes(task.id)));
+      setSelectedTaskIds([]);
+    } catch (err) {
+      console.error('Delete tasks failed:', err);
+    }
+  };
+
+ const handleToggleTask = (taskId) => {
+    setSelectedTaskIds(prev =>
+      prev.includes(taskId)
+        ? prev.filter(id => id !== taskId)
+        : [...prev, taskId]
+    );
+  };
+
+  const handleToggleStatus = async (task) => {
+    const newStatus = task.status === 'todo' ? 'done' : 'todo';
+
+    try {
+      await fetch(`${API_BASE_URL}/${task.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      setTasks(tasks.map(t =>
+        t.id === task.id ? { ...t, status: newStatus } : t
+      ));
+    } catch (err) {
+      console.error('Toggle status failed:', err);
+    }
+  };
+
+  const selectedTask =
+    selectedTaskIds.length === 1
+      ? tasks.find(t => t.id === selectedTaskIds[0])
+      : undefined;
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Todo List</h1>
+    <div className="app-container">
+      {/* Left Navbar - 20% */}
+      <Navbar currentView={currentView} onViewChange={setCurrentView} />
 
-      <button onClick={openAdd}>Add Task</button>
-
-      <table border="1" cellPadding="8">
-        <thead>
-          <tr>
-            <th>✔</th>
-            <th>Task</th>
-            <th>Deadline</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {todos.map(t => (
-            <tr key={t.id}>
-              <td>
-                <input
-                  type="checkbox"
-                  checked={t.checked}
-                  onChange={() =>
-                    setTodos(todos.map(x =>
-                      x.id === t.id ? { ...x, checked: !x.checked } : x
-                    ))
-                  }
-                />
-              </td>
-              <td>{t.task}</td>
-              <td>{t.deadline}</td>
-              <td>{t.status}</td>
-              <td>
-                {t.checked && (
-                  <>
-                    <button onClick={() => openEdit(t)}>Update</button>
-                    <button onClick={() => remove(t.id)}>Delete</button>
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {showModal && (
-        <div style={{
-          position: "fixed",
-          top: "30%",
-          left: "30%",
-          background: "#fff",
-          padding: 20,
-          border: "1px solid black"
-        }}>
-          <h3>{selected ? "Update Task" : "Add Task"}</h3>
-
-          <input
-            placeholder="Task"
-            value={form.task}
-            onChange={e => setForm({ ...form, task: e.target.value })}
-          />
-          <br />
-
-          <input
-            type="date"
-            value={form.deadline}
-            onChange={e => setForm({ ...form, deadline: e.target.value })}
-          />
-          <br />
-
-          <select
-            value={form.status}
-            onChange={e => setForm({ ...form, status: e.target.value })}
-          >
-            <option value="todo">Todo</option>
-            <option value="doing">Doing</option>
-            <option value="done">Done</option>
-          </select>
-
-          <br /><br />
-          <button onClick={submit}>Save</button>
-          <button onClick={() => setShowModal(false)}>Cancel</button>
+      {/* Right Main Content - 80% */}
+      <div className="main-content">
+        {/* Search Bar */}
+        <div className="search-container">
+          <div className="search-wrapper">
+            <Search className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+          </div>
         </div>
+
+        {/* Task Table */}
+        <div className="table-container">
+          <TaskTable
+            tasks={filteredTasks}
+            selectedTaskIds={selectedTaskIds}
+            onToggleTask={handleToggleTask}
+            onToggleStatus={handleToggleStatus}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <ActionButtons
+          hasSelection={selectedTaskIds.length > 0}
+          canUpdate={selectedTaskIds.length === 1}
+          onAdd={() => setIsAddDialogOpen(true)}
+          onUpdate={() => setIsUpdateDialogOpen(true)}
+          onDelete={handleDeleteTasks}
+        />
+      </div>
+
+      {/* Dialogs */}
+      <AddTaskDialog
+        isOpen={isAddDialogOpen}
+        onClose={() => setIsAddDialogOpen(false)}
+        onAdd={handleAddTask}
+      />
+
+      {selectedTask && (
+        <UpdateTaskDialog
+          isOpen={isUpdateDialogOpen}
+          onClose={() => setIsUpdateDialogOpen(false)}
+          onUpdate={handleUpdateTask}
+          task={selectedTask}
+        />
       )}
     </div>
   );
 }
-
-export default App;
