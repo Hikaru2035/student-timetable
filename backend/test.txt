@@ -1,0 +1,59 @@
+const app = express();
+const prisma = new PrismaClient();
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.get('/api/tasks', async (req, res) => {
+  const tasks = await prisma.task.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(tasks);
+});
+
+app.post('/api/tasks', async (req, res) => {
+  const { name, deadline, status } = req.body;
+
+  const task = await prisma.task.create({
+    data: {
+      name,
+      deadline: new Date(deadline),
+      status,
+    },
+  });
+
+  res.status(201).json(task);
+});
+
+app.put('/api/tasks/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, deadline, status } = req.body;
+
+  const task = await prisma.task.update({
+    where: { id },
+    data: {
+      name,
+      deadline: new Date(deadline),
+      status,
+    },
+  });
+
+  res.json(task);
+});
+
+app.delete('/api/tasks/:id', async (req, res) => {
+  const { id } = req.params;
+
+  await prisma.task.delete({ where: { id } });
+
+  res.status(204).end();
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 API running on http://localhost:${PORT}`);
+});

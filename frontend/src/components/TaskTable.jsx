@@ -1,6 +1,12 @@
 import './TaskTable.css';
 
 export function TaskTable({ tasks, selectedTaskIds, onToggleTask, onToggleStatus }) {
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('vi-VN');
+  };
+
   return (
     <div className="task-table-wrapper">
       <table className="task-table">
@@ -31,7 +37,10 @@ export function TaskTable({ tasks, selectedTaskIds, onToggleTask, onToggleStatus
                   />
                 </td>
                 <td className="task-name">{task.name}</td>
-                <td className="task-deadline">{task.deadline}</td>
+                <td className="task-deadline">
+                  {formatDate(task.deadline)}
+                </td>
+
                 <td>
                   <button
                     onClick={() => onToggleStatus(task.id)}

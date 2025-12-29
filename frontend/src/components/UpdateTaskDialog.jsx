@@ -4,12 +4,12 @@ import './Dialog.css';
 
 export function UpdateTaskDialog({ isOpen, onClose, onUpdate, task }) {
   const [name, setName] = useState(task.name);
-  const [deadline, setDeadline] = useState(task.deadline);
+  const [deadline, setDeadline] = useState('');
   const [status, setStatus] = useState(task.status);
 
   useEffect(() => {
     setName(task.name);
-    setDeadline(task.deadline);
+    setDeadline(toDateInputValue(task.deadline));
     setStatus(task.status);
   }, [task]);
 
@@ -21,6 +21,11 @@ export function UpdateTaskDialog({ isOpen, onClose, onUpdate, task }) {
       onUpdate({ name: name.trim(), deadline, status });
     }
   };
+
+  function toDateInputValue(date) {
+  if (!date) return '';
+  return date.split('T')[0];
+  }
 
   return (
     <div className="dialog-overlay">

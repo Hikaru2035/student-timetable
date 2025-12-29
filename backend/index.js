@@ -1,36 +1,81 @@
 // server.js
 import express from 'express';
 import cors from 'cors';
+import { PrismaClient } from '@prisma/client';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+const prisma = new PrismaClient();
 
-let tasks = [
-  { id: '1', name: 'Design new landing page', deadline: '2025-12-28', status: 'todo' },
-];
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const tasks = await prisma.task.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
-app.get('/api/tasks', (req, res) => {
-  res.json(tasks);
+    res.json(tasks);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post('/api/tasks', (req, res) => {
-  const newTask = { ...req.body, id: Date.now().toString() };
-  tasks.push(newTask);
-  res.status(201).json(newTask);
+app.post("/api/tasks", async (req,res) => {
+  const { name, deadline, status } = req.body;
+  try {
+    const post = await prisma.task.create({
+      data: { name, deadline: new Date(deadline), status}
+    })
+    res.status(201).json(post);
+  } catch(error){
+    res.status(500).json(error.message);
+  }
+})
+
+app.put('/api/tasks/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, deadline, status } = req.body;
+
+  try {
+    const task = await prisma.task.update({
+      where: { id },
+      data: {
+        name,
+        deadline: deadline ? new Date(deadline) : undefined,
+        status,
+      },
+    });
+    res.json(task);
+
+  } catch (error) {
+    console.error(error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.put('/api/tasks/:id', (req, res) => {
-  tasks = tasks.map(t =>
-    t.id === req.params.id ? { ...t, ...req.body } : t
-  );
-  res.json({ success: true });
-});
-
-app.delete('/api/tasks', (req, res) => {
+app.delete('/api/tasks', async (req, res) => {
   const { ids } = req.body;
-  tasks = tasks.filter(t => !ids.includes(t.id));
-  res.json({ success: true });
+  if (!ids || !Array.isArray(ids)) {
+    return res.status(400).json({ error: 'ids must be an array' });
+  }
+
+  try {
+    await prisma.task.deleteMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+    res.json({ message: 'Deleted successfully', deletedIds: ids });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.listen(3001, () => console.log('API running on 3001'));
+app.listen(3000, () => console.log('API running on 3000'));

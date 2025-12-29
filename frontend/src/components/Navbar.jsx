@@ -12,7 +12,7 @@ export function Navbar({ currentView, onViewChange }) {
       {/* Logo */}
       <div className="navbar-logo-container">
         <div className="navbar-logo">
-          <span className="navbar-logo-text">T</span>
+          <span className="navbar-logo-text"></span>
         </div>
       </div>
 
