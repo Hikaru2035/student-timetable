@@ -7,7 +7,7 @@ import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import './App.css';
 
-const API_BASE_URL = 'http://172.16.220.86:3000/api/tasks';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function App() {
   const [tasks, setTasks] = useState([]);

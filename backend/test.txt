@@ -1,59 +1,60 @@
-const app = express();
-const prisma = new PrismaClient();
+Dockerfile frontend GPT
+# build
+FROM node:20-alpine AS build
+WORKDIR /app
 
-app.use(cors());
-app.use(express.json());
+COPY package*.json ./
+RUN npm install
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+COPY . .
+RUN npm run build
 
-app.get('/api/tasks', async (req, res) => {
-  const tasks = await prisma.task.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
-  res.json(tasks);
-});
+# serve bằng nginx
+FROM nginx:alpine
 
-app.post('/api/tasks', async (req, res) => {
-  const { name, deadline, status } = req.body;
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-  const task = await prisma.task.create({
-    data: {
-      name,
-      deadline: new Date(deadline),
-      status,
-    },
-  });
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
 
-  res.status(201).json(task);
-});
 
-app.put('/api/tasks/:id', async (req, res) => {
-  const { id } = req.params;
-  const { name, deadline, status } = req.body;
+docker-compose
+version: "3.9"
 
-  const task = await prisma.task.update({
-    where: { id },
-    data: {
-      name,
-      deadline: new Date(deadline),
-      status,
-    },
-  });
+services:
+  db:
+    image: postgres:16
+    container_name: todo-db
+    restart: always
+    environment:
+      POSTGRES_DB: taskdb
+      POSTGRES_USER: task_user
+      POSTGRES_PASSWORD: task_pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
-  res.json(task);
-});
+  backend:
+    build: ./backend
+    container_name: todo-backend
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - ./backend/.env
+    ports:
+      - "3001:3001"
 
-app.delete('/api/tasks/:id', async (req, res) => {
-  const { id } = req.params;
+  frontend:
+    build: ./frontend
+    container_name: todo-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
-  await prisma.task.delete({ where: { id } });
-
-  res.status(204).end();
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 API running on http://localhost:${PORT}`);
-});
+volumes:
+  pgdata:
