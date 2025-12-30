@@ -7,3 +7,5 @@ node_modules
 /lib/generated/prisma
 
 /generated/prisma
+
+node_modules/
