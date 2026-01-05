@@ -78,4 +78,4 @@ app.delete('/api/tasks', async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log('API running on 3000'));
+app.listen(3000, '0.0.0.0', () => console.log('API running on 3000'));
