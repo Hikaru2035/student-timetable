@@ -1,1 +1,2 @@
-./certs/*
+# Ignore all certificates and keys
+certs/*

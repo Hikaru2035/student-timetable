@@ -1,0 +1,19 @@
+
+# Node
+**/node_modules
+
+# Env
+.env
+.env.*
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+
+# Database
+postgres-data/
+
+# Build
+frontend/dist
