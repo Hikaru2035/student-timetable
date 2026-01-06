@@ -1,19 +1,29 @@
-
 # Node
 **/node_modules
 
 # Env
 .env
-.env.*
 
-# Docker
-*.log
-
-# OS
-.DS_Store
+# Build
+frontend/dist
 
 # Database
 postgres-data/
 
-# Build
-frontend/dist
+# Docker
+docker-compose.override.yml
+*.log
+
+# Nginx certs
+nginx/certs/*
+!nginx/certs/.gitkeep
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# npm
+npm-debug.log*
