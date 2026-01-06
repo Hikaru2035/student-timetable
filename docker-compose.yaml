@@ -1,10 +1,11 @@
 services:
   frontend:
     build: ./frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
+    volumes:
+      - frontend-static:/dist
+    command: sh -c "cp -r /usr/src/app/dist/* /dist/"
+    expose:
+      - "80"
 
   backend:
     build: ./backend
@@ -12,6 +13,8 @@ services:
       - ./backend/.env
     depends_on:
       - postgres
+    expose:
+      - "5000"
 
   postgres:
     image: postgres:16
@@ -20,5 +23,17 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - frontend-static:/usr/share/nginx/html:ro
+    depends_on:
+      - frontend
+      - backend
+
 volumes:
   postgres-data:
+  frontend-static:
