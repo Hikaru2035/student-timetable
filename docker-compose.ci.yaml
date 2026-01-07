@@ -18,9 +18,7 @@ services:
     command: sh -c "npm ci && npm run build"
 
   nginx:
-    build:
-      context: ./nginx
-    image: hikaru20356/nginx:${VERSION}
+      image: nginx:alpine
 
   postgres:
     image: postgres:16
