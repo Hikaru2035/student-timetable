@@ -68,6 +68,7 @@ jobs:
         run: docker compose -f docker-compose.ci.yaml build
 
       - name: Docker compose push
+<<<<<<< HEAD
         run: docker compose -f docker-compose.ci.yaml push
 
       - name: Trigger Jenkins Deploy
@@ -87,3 +88,6 @@ jobs:
             "http://$JENKINS_URL/job/todo-crud-deploy-production/buildWithParameters?VERSION=$VERSION" \
             -H "$CRUMB" \
             --user "$JENKINS_USER:$JENKINS_TOKEN"
+=======
+        run: docker compose -f docker-compose.ci.yaml push
+>>>>>>> 082f511 (update)
