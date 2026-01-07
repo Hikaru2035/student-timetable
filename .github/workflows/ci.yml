@@ -69,3 +69,8 @@ jobs:
 
       - name: Docker compose push
         run: docker compose -f docker-compose.ci.yaml push
+
+      - name: Trigger Jenkins Deploy
+        run: |
+          curl -X POST "http://JENKINS_URL/job/todo-crud-deploy-production/buildWithParameters?VERSION=${{ github.sha }}" \
+            --user admin:JENKINS_API_TOKEN

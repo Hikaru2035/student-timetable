@@ -1,63 +1,52 @@
 pipeline {
   agent any
 
+  parameters {
+    string(
+      name: 'VERSION',
+      description: 'Docker image tag (commit SHA)',
+      trim: true
+    )
+  }
+
   environment {
-    COMPOSE_FILE = "/deploy/docker-compose.prod.yaml"
-    PROJECT_NAME = "todo-prod"
+    DEPLOY_DIR = '/home/dev/todo-api'
   }
 
   stages {
 
-    stage("Validate Environment") {
+    stage('Validate') {
       steps {
-        sh '''
-          echo "🔍 Validate environment"
-          command -v docker >/dev/null || { echo "❌ Docker not found"; exit 1; }
-          command -v docker compose >/dev/null || { echo "❌ Docker Compose not found"; exit 1; }
-          test -f $COMPOSE_FILE || { echo "❌ docker-compose.prod.yaml missing"; exit 1; }
-        '''
-      }
-    }
-
-    stage("Docker Login") {
-      steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'dockerhub',
-          usernameVariable: 'DOCKER_USER',
-          passwordVariable: 'DOCKER_PASS'
-        )]) {
-          sh '''
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-          '''
+        script {
+          if (!params.VERSION?.trim()) {
+            error "❌ VERSION is required"
+          }
         }
       }
     }
 
-    stage("Pull Images") {
+    stage('Deploy') {
       steps {
-        sh '''
-          echo "📥 Pull latest images"
-          docker compose -f $COMPOSE_FILE pull
-        '''
-      }
-    }
+        sh """
+          echo "🚀 Deploying version: ${params.VERSION}"
 
-    stage("Deploy Production") {
-      steps {
-        sh '''
-          echo "🚀 Deploying production"
-          docker compose -f $COMPOSE_FILE up -d --remove-orphans
-        '''
+          cd ${DEPLOY_DIR}
+
+          export VERSION=${params.VERSION}
+
+          docker compose -f docker-compose.prod.yaml pull
+          docker compose -f docker-compose.prod.yaml up -d
+        """
       }
     }
   }
 
   post {
     success {
-      echo "✅ DEPLOY SUCCESS"
+      echo "✅ Deploy SUCCESS: ${params.VERSION}"
     }
     failure {
-      echo "❌ DEPLOY FAILED"
+      echo "❌ Deploy FAILED"
     }
   }
 }
