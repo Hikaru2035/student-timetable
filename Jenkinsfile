@@ -5,16 +5,13 @@ pipeline {
         DEPLOY_DIR = "/home/dev/todo-api"
         ENV_FILE   = ".env"
         BACKUP_ENV = ".env.backup"
-        VERSION = ''
+        VERSION    = ''
     }
 
     stages {
 
-        stage('Checkout & Setup Node') {
+        stage('Setup Node & VERSION') {
             steps {
-                echo "📥 Checkout code"
-                checkout scm
-
                 echo "⚡ Setup Node.js"
                 sh '''
                     curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
@@ -55,7 +52,6 @@ pipeline {
 
         stage('Docker Build & Push') {
             steps {
-                // Sử dụng đúng credential ID dockerhub-creds
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
                                                  usernameVariable: 'DOCKER_USERNAME', 
                                                  passwordVariable: 'DOCKER_PASSWORD')]) {
@@ -97,7 +93,6 @@ pipeline {
             }
         }
 
-        // Stage rollback chạy khi build fail
         stage('Rollback') {
             when {
                 expression { currentBuild.result == 'FAILURE' }
@@ -121,6 +116,9 @@ pipeline {
     post {
         success {
             echo "✅ DEPLOY SUCCESS – PROD STABLE"
+        }
+        failure {
+            echo "❌ DEPLOY FAILED"
         }
     }
 }
