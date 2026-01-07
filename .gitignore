@@ -3,6 +3,7 @@
 
 # Env
 .env
+.env.backup
 
 # Build
 frontend/dist
