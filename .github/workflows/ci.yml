@@ -68,26 +68,4 @@ jobs:
         run: docker compose -f docker-compose.ci.yaml build
 
       - name: Docker compose push
-<<<<<<< HEAD
         run: docker compose -f docker-compose.ci.yaml push
-
-      - name: Trigger Jenkins Deploy
-        env:
-          JENKINS_URL: ${{ secrets.JENKINS_URL }}
-          JENKINS_USER: admin
-          JENKINS_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
-          VERSION: ${{ github.sha }}
-        run: |
-          sleep 15
-
-          CRUMB=$(curl -s \
-            --user "$JENKINS_USER:$JENKINS_TOKEN" \
-            "http://$JENKINS_URL/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)")
-
-          curl -X POST \
-            "http://$JENKINS_URL/job/todo-crud-deploy-production/buildWithParameters?VERSION=$VERSION" \
-            -H "$CRUMB" \
-            --user "$JENKINS_USER:$JENKINS_TOKEN"
-=======
-        run: docker compose -f docker-compose.ci.yaml push
->>>>>>> 082f511 (update)
