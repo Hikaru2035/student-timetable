@@ -69,10 +69,3 @@ jobs:
 
       - name: Docker compose push
         run: docker compose -f docker-compose.ci.yaml push
-
-      - name: Trigger Jenkins Deploy
-        if: github.ref == 'refs/heads/1.3.8-cicd-completed'
-        run: |
-          curl -X POST \
-          "${{ secrets.JENKINS_URL }}/job/deploy/buildWithParameters?VERSION=${{ github.sha }}" \
-          --user "${{ secrets.JENKINS_USER }}:${{ secrets.JENKINS_TOKEN }}"
