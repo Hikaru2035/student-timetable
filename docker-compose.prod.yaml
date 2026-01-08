@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: hikaru20356/frontend:${VERSION}
+    image: todo-frontend:active
     volumes:
       - frontend-static:/dist
     command: sh -c "cp -r /usr/src/app/dist/* /dist/"
@@ -8,14 +8,14 @@ services:
       - "80"
 
   backend:
-    image: hikaru20356/backend:${VERSION}
+    image: todo-backend:active
     env_file:
       - ./backend/.env
     depends_on:
       - postgres
     expose:
       - "3000"
-
+  
   postgres:
     image: postgres:16
     env_file:

@@ -2,123 +2,111 @@ pipeline {
     agent any
 
     environment {
-        DEPLOY_DIR = "/home/dev/todo-api"
-        ENV_FILE   = ".env"
-        BACKUP_ENV = ".env.backup"
-        VERSION    = ''
+        BUILD_TAG_ID = "build-${BUILD_NUMBER}"
+        DEPLOY_DIR   = "${WORKSPACE}"
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
     }
 
     stages {
 
-        stage('Setup Node & VERSION') {
+        stage('Checkout Source') {
             steps {
-                echo "⚡ Setup Node.js"
-                sh '''
-                    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-                    apt-get install -y nodejs
-                    node -v
-                    npm -v
-                '''
-
-                echo "🔖 Set VERSION from git commit"
-                sh '''
-                    VERSION=$(git rev-parse --short HEAD)
-                    echo "VERSION=$VERSION" > version.env
-                '''
-                script {
-                    def props = readProperties file: 'version.env'
-                    env.VERSION = props['VERSION']
-                    echo "✅ VERSION=${env.VERSION}"
-                }
+                checkout scm
             }
         }
 
-        stage('Install Backend & Frontend') {
+        stage('Install & Build App') {
             steps {
-                echo "📦 Install backend deps"
                 sh '''
+                    set -e
+                    cd $DEPLOY_DIR
+
+                    echo "Backend install"
                     cd backend
                     npm ci
-                '''
 
-                echo "📦 Install frontend deps & build"
-                sh '''
-                    cd frontend
+                    echo "Frontend build"
+                    cd ../frontend
                     npm ci
                     npm run build
                 '''
             }
         }
 
-        stage('Docker Build & Push') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
-                                                 usernameVariable: 'DOCKER_USERNAME', 
-                                                 passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh '''
-                        echo "🐳 Docker login"
-                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-                        echo "🛠️ Build Docker images"
-                        docker compose -f docker-compose.ci.yaml build --build-arg VERSION=$VERSION
-
-                        echo "⬆️ Push Docker images"
-                        docker compose -f docker-compose.ci.yaml push
-                    '''
-                }
-            }
-        }
-
-        stage('Pre-check') {
+        stage('Build Docker Images') {
             steps {
                 sh '''
+                    set -e
                     cd $DEPLOY_DIR
-                    echo "📌 Backup current env"
-                    if [ -f $ENV_FILE ]; then
-                        cp $ENV_FILE $BACKUP_ENV
-                    fi
+
+                    docker build -t todo-backend:${BUILD_TAG_ID} backend
+                    docker build -t todo-frontend:${BUILD_TAG_ID} frontend
                 '''
             }
         }
 
-        stage('Deploy New Version') {
+        stage('Backup Active → Stable') {
             steps {
                 sh '''
-                    cd $DEPLOY_DIR
-                    echo "VERSION=${VERSION}" > $ENV_FILE
-                    echo "🚀 Pull & start new version"
-                    docker-compose --env-file $ENV_FILE -f docker-compose.prod.yaml pull
-                    docker-compose --env-file $ENV_FILE -f docker-compose.prod.yaml up -d
+                    docker image inspect todo-backend:active >/dev/null 2>&1 \
+                      && docker tag todo-backend:active todo-backend:stable || true
+
+                    docker image inspect todo-frontend:active >/dev/null 2>&1 \
+                      && docker tag todo-frontend:active todo-frontend:stable || true
                 '''
             }
         }
 
-        stage('Rollback') {
-            when {
-                expression { currentBuild.result == 'FAILURE' }
-            }
+        stage('Promote Build → Active') {
             steps {
                 sh '''
-                    cd $DEPLOY_DIR
-                    echo "🧯 ROLLBACK STARTED"
-                    if [ -f $BACKUP_ENV ]; then
-                        cp $BACKUP_ENV $ENV_FILE
-                        docker-compose --env-file $ENV_FILE -f docker-compose.prod.yaml up -d
-                        echo "♻️ Rollback completed"
-                    else
-                        echo "⚠️ No backup version found"
-                    fi
+                    docker tag todo-backend:${BUILD_TAG_ID} todo-backend:active
+                    docker tag todo-frontend:${BUILD_TAG_ID} todo-frontend:active
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                    docker-compose -f docker-compose.prod.yaml up -d
                 '''
             }
         }
     }
 
     post {
-        success {
-            echo "✅ DEPLOY SUCCESS – PROD STABLE"
-        }
         failure {
-            echo "❌ DEPLOY FAILED"
+            echo "DEPLOY FAILED – ROLLBACK"
+
+            sh '''
+                docker image inspect todo-backend:stable >/dev/null 2>&1 || exit 1
+
+                docker tag todo-backend:stable todo-backend:active
+                docker tag todo-frontend:stable todo-frontend:active
+
+                docker-compose -f docker-compose.prod.yaml up -d
+            '''
+        }
+
+        success {
+            echo "DEPLOY SUCCESS – ${BUILD_TAG_ID}"
+
+            sh '''
+                docker images todo-backend --format '{{.Tag}}' \
+                | grep '^build-' | sort -V | head -n -5 \
+                | awk '{print "todo-backend:"$1}' \
+                | xargs -r docker rmi || true
+
+                docker images todo-frontend --format '{{.Tag}}' \
+                | grep '^build-' | sort -V | head -n -5 \
+                | awk '{print "todo-frontend:"$1}' \
+                | xargs -r docker rmi || true
+            '''
         }
     }
 }
