@@ -64,30 +64,31 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh 'docker-compose -f docker-compose.prod.yaml up -d'
+                sh '''
+                    docker-compose -f docker-compose.prod.yaml up -d
+                '''
             }
         }
     }
 
     post {
+
         failure {
-            echo "🧯 PIPELINE FAILED – START ROLLBACK"
+            echo "🧯 DEPLOY FAILED – ROLLBACK TO STABLE"
 
-            stage('Rollback to Stable') {
-                agent any
-                steps {
-                    sh '''
-                        docker image inspect todo-backend:stable >/dev/null 2>&1 || {
-                            echo "❌ No stable image – rollback impossible"
-                            exit 1
-                        }
+            script {
+                sh '''
+                    docker image inspect todo-backend:stable >/dev/null 2>&1 || {
+                        echo "❌ No stable image – rollback impossible"
+                        exit 1
+                    }
 
-                        docker tag todo-backend:stable todo-backend:active
-                        docker tag todo-frontend:stable todo-frontend:active
+                    echo "♻️ Restoring stable → active"
+                    docker tag todo-backend:stable todo-backend:active
+                    docker tag todo-frontend:stable todo-frontend:active
 
-                        docker-compose -f docker-compose.prod.yaml up -d
-                    '''
-                }
+                    docker-compose -f docker-compose.prod.yaml up -d
+                '''
             }
         }
 
