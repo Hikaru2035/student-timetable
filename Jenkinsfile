@@ -13,9 +13,13 @@ pipeline {
 
     stages {
 
-        stage('Checkout Source') {
+        stage('Prepare Workspace') {
             steps {
-                checkout scm
+                sh '''
+                    set -e
+                    echo "Workspace: $DEPLOY_DIR"
+                    ls -la
+                '''
             }
         }
 
@@ -23,13 +27,9 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    cd $DEPLOY_DIR
-
-                    echo "Backend install"
                     cd backend
                     npm ci
 
-                    echo "Frontend build"
                     cd ../frontend
                     npm ci
                     npm run build
@@ -41,8 +41,6 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    cd $DEPLOY_DIR
-
                     docker build -t todo-backend:${BUILD_TAG_ID} backend
                     docker build -t todo-frontend:${BUILD_TAG_ID} frontend
                 '''
@@ -80,21 +78,27 @@ pipeline {
     }
 
     post {
+
         failure {
-            echo "DEPLOY FAILED – ROLLBACK"
+            node {
+                echo "🧯 DEPLOY FAILED – ROLLBACK TO STABLE"
 
-            sh '''
-                docker image inspect todo-backend:stable >/dev/null 2>&1 || exit 1
+                sh '''
+                    docker image inspect todo-backend:stable >/dev/null 2>&1 || {
+                        echo "❌ No stable image – rollback impossible"
+                        exit 1
+                    }
 
-                docker tag todo-backend:stable todo-backend:active
-                docker tag todo-frontend:stable todo-frontend:active
+                    docker tag todo-backend:stable todo-backend:active
+                    docker tag todo-frontend:stable todo-frontend:active
 
-                docker-compose -f docker-compose.prod.yaml up -d
-            '''
+                    docker-compose -f docker-compose.prod.yaml up -d
+                '''
+            }
         }
 
         success {
-            echo "DEPLOY SUCCESS – ${BUILD_TAG_ID}"
+            echo "✅ DEPLOY SUCCESS – ${BUILD_TAG_ID}"
 
             sh '''
                 docker images todo-backend --format '{{.Tag}}' \
