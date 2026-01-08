@@ -1,24 +1,25 @@
 pipeline {
     agent any
 
-    environment {
-        BUILD_TAG_ID = "build-${BUILD_NUMBER}"
-    }
-
     options {
+        skipDefaultCheckout(true)
         timestamps()
         disableConcurrentBuilds()
     }
 
+    environment {
+        BUILD_TAG_ID = "build-${BUILD_NUMBER}"
+    }
+
     stages {
 
-        stage('Prepare Workspace') {
+        stage('Checkout Source') {
             steps {
-                sh 'ls -la'
+                checkout scm
             }
         }
 
-        stage('Install & Build App') {
+        stage('Build App') {
             steps {
                 sh '''
                     cd backend
@@ -69,39 +70,29 @@ pipeline {
     }
 
     post {
-
         failure {
-            echo "🧯 DEPLOY FAILED – ROLLBACK TO STABLE"
+            echo "🧯 PIPELINE FAILED – START ROLLBACK"
 
-            script {
-                sh '''
-                    docker image inspect todo-backend:stable >/dev/null 2>&1 || {
-                        echo "❌ No stable image – rollback impossible"
-                        exit 1
-                    }
+            stage('Rollback to Stable') {
+                agent any
+                steps {
+                    sh '''
+                        docker image inspect todo-backend:stable >/dev/null 2>&1 || {
+                            echo "❌ No stable image – rollback impossible"
+                            exit 1
+                        }
 
-                    docker tag todo-backend:stable todo-backend:active
-                    docker tag todo-frontend:stable todo-frontend:active
+                        docker tag todo-backend:stable todo-backend:active
+                        docker tag todo-frontend:stable todo-frontend:active
 
-                    docker-compose -f docker-compose.prod.yaml up -d
-                '''
+                        docker-compose -f docker-compose.prod.yaml up -d
+                    '''
+                }
             }
         }
 
         success {
             echo "✅ DEPLOY SUCCESS – ${BUILD_TAG_ID}"
-
-            sh '''
-                docker images todo-backend --format '{{.Tag}}' \
-                | grep '^build-' | sort -V | head -n -5 \
-                | awk '{print "todo-backend:"$1}' \
-                | xargs -r docker rmi || true
-
-                docker images todo-frontend --format '{{.Tag}}' \
-                | grep '^build-' | sort -V | head -n -5 \
-                | awk '{print "todo-frontend:"$1}' \
-                | xargs -r docker rmi || true
-            '''
         }
     }
 }
