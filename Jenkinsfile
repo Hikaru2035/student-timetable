@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         BUILD_TAG_ID = "build-${BUILD_NUMBER}"
-        DEPLOY_DIR   = "${WORKSPACE}"
     }
 
     options {
@@ -15,18 +14,13 @@ pipeline {
 
         stage('Prepare Workspace') {
             steps {
-                sh '''
-                    set -e
-                    echo "Workspace: $DEPLOY_DIR"
-                    ls -la
-                '''
+                sh 'ls -la'
             }
         }
 
         stage('Install & Build App') {
             steps {
                 sh '''
-                    set -e
                     cd backend
                     npm ci
 
@@ -40,7 +34,6 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh '''
-                    set -e
                     docker build -t todo-backend:${BUILD_TAG_ID} backend
                     docker build -t todo-frontend:${BUILD_TAG_ID} frontend
                 '''
@@ -70,9 +63,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh '''
-                    docker-compose -f docker-compose.prod.yaml up -d
-                '''
+                sh 'docker-compose -f docker-compose.prod.yaml up -d'
             }
         }
     }
@@ -80,9 +71,9 @@ pipeline {
     post {
 
         failure {
-            node {
-                echo "🧯 DEPLOY FAILED – ROLLBACK TO STABLE"
+            echo "🧯 DEPLOY FAILED – ROLLBACK TO STABLE"
 
+            script {
                 sh '''
                     docker image inspect todo-backend:stable >/dev/null 2>&1 || {
                         echo "❌ No stable image – rollback impossible"
