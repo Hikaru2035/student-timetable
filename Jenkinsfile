@@ -6,11 +6,6 @@ pipeline {
         BUILD_TAG_ID = "build-${BUILD_NUMBER}"
     }
 
-    options {
-        timestamps()
-        disableConcurrentBuilds()
-    }
-
     stages {
 
         stage('Prepare Workspace') {
@@ -18,8 +13,6 @@ pipeline {
                 sh '''
                     set -e
                     cd $DEPLOY_DIR
-                    echo "📂 Working directory:"
-                    pwd
                 '''
             }
         }
@@ -30,11 +23,12 @@ pipeline {
                     set -e
                     cd $DEPLOY_DIR
 
-                    echo "📦 Backend install"
+                    echo "Backend install"
                     cd backend
                     npm ci
+                    npm run build
 
-                    echo "📦 Frontend build"
+                    echo "Frontend build"
                     cd ../frontend
                     npm ci
                     npm run build
@@ -48,10 +42,10 @@ pipeline {
                     set -e
                     cd $DEPLOY_DIR
 
-                    echo "🐳 Build backend image"
+                    echo "Build backend image"
                     docker build -t todo-backend:${BUILD_TAG_ID} backend
 
-                    echo "🐳 Build frontend image"
+                    echo "Build frontend image"
                     docker build -t todo-frontend:${BUILD_TAG_ID} frontend
                 '''
             }
@@ -61,7 +55,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    echo "♻️ Backup active images → stable"
+                    echo "Backup active images → stable"
 
                     docker image inspect todo-backend:active >/dev/null 2>&1 \
                       && docker tag todo-backend:active todo-backend:stable || true
@@ -76,7 +70,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    echo "🚀 Promote build → active"
+                    echo "Promote build → active"
 
                     docker tag todo-backend:${BUILD_TAG_ID} todo-backend:active
                     docker tag todo-frontend:${BUILD_TAG_ID} todo-frontend:active
@@ -90,7 +84,7 @@ pipeline {
                     set -e
                     cd $DEPLOY_DIR
 
-                    echo "📦 Deploy active images"
+                    echo "Deploy active images"
                     docker-compose -f docker-compose.prod.yaml up -d
                 '''
             }
@@ -100,24 +94,31 @@ pipeline {
     post {
 
         failure {
-            echo "🧯 DEPLOY FAILED – ROLLBACK TO STABLE"
+            echo "PIPELINE FAILED – CLEANUP FAILED BUILD IMAGES"
+
+            sh '''
+                docker image inspect todo-backend:${BUILD_TAG_ID} >/dev/null 2>&1 \
+                && docker rmi -f todo-backend:${BUILD_TAG_ID} || true
+
+                docker image inspect todo-frontend:${BUILD_TAG_ID} >/dev/null 2>&1 \
+                && docker rmi -f todo-frontend:${BUILD_TAG_ID} || true
+            '''
+
+            echo "ROLLBACK TO STABLE"
 
             sh '''
                 set -e
                 cd $DEPLOY_DIR
 
                 docker image inspect todo-backend:stable >/dev/null 2>&1 || {
-                    echo "❌ No stable backend image – rollback impossible"
+                    echo "No stable backend image – rollback impossible"
                     exit 1
                 }
 
-                echo "♻️ Restoring stable images → active"
                 docker tag todo-backend:stable todo-backend:active
                 docker tag todo-frontend:stable todo-frontend:active
 
                 docker-compose -f docker-compose.prod.yaml up -d
-
-                echo "♻️ Rollback completed"
             '''
         }
 
