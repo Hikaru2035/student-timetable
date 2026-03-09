@@ -8,84 +8,132 @@ const prisma = new PrismaClient();
 // Middleware to check authentication
 router.use(requireAuth);
 
-// Get personal info
+// Get all time blocks for current user
 router.get('/', async (req, res) => {
   try {
-    const personalInfo = await prisma.personalInfo.findUnique({
+    const timeBlocks = await prisma.timeBlock.findMany({
       where: { userId: req.userId },
+      orderBy: { date: 'asc' },
     });
 
-    res.json({ personalInfo });
+    res.json({ timeBlocks });
   } catch (error) {
-    console.error('Get personal info error:', error);
-    res.status(500).json({ error: 'Failed to get personal info' });
+    console.error('Get time blocks error:', error);
+    res.status(500).json({ error: 'Failed to get time blocks' });
   }
 });
 
-// Create or update personal info
-router.post('/', async (req, res) => {
+// Get time blocks by date range
+router.get('/range', async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      email,
-      phone,
-      studentId,
-      dateOfBirth,
-      address,
-      emergencyContact,
-      emergencyPhone,
-    } = req.body;
+    const { startDate, endDate } = req.query;
 
-    if (!firstName || !lastName || !email || !phone) {
-      return res.status(400).json({ error: 'Required fields are missing' });
-    }
-
-    // Check if personal info already exists
-    const existing = await prisma.personalInfo.findUnique({
-      where: { userId: req.userId },
+    const timeBlocks = await prisma.timeBlock.findMany({
+      where: {
+        userId: req.userId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      orderBy: { date: 'asc' },
     });
 
-    let personalInfo;
+    res.json({ timeBlocks });
+  } catch (error) {
+    console.error('Get time blocks by range error:', error);
+    res.status(500).json({ error: 'Failed to get time blocks' });
+  }
+});
 
-    if (existing) {
-      // Update existing
-      personalInfo = await prisma.personalInfo.update({
-        where: { userId: req.userId },
-        data: {
-          firstName,
-          lastName,
-          email,
-          phone,
-          studentId,
-          dateOfBirth,
-          address,
-          emergencyContact,
-          emergencyPhone,
-        },
-      });
-    } else {
-      // Create new
-      personalInfo = await prisma.personalInfo.create({
-        data: {
-          firstName,
-          lastName,
-          email,
-          phone,
-          studentId,
-          dateOfBirth,
-          address,
-          emergencyContact,
-          emergencyPhone,
-          userId: req.userId,
-        },
-      });
+// Create time block
+router.post('/', async (req, res) => {
+  try {
+    const { title, type, date, startTime, endTime, location, description, color } = req.body;
+
+    if (!title || !type || !date || !startTime || !endTime) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    res.json({ personalInfo });
+    const timeBlock = await prisma.timeBlock.create({
+      data: {
+        title,
+        type,
+        date,
+        startTime,
+        endTime,
+        location,
+        description,
+        color,
+        userId: req.userId,
+      },
+    });
+
+    res.status(201).json({ timeBlock });
   } catch (error) {
-    console.error('Save personal info error:', error);
-    res.status(500).json({ error: 'Failed to save personal info' });
+    console.error('Create time block error:', error);
+    res.status(500).json({ error: 'Failed to create time block' });
+  }
+});
+
+// Update time block
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, type, date, startTime, endTime, location, description, color } = req.body;
+
+    // Check if time block belongs to user
+    const existingBlock = await prisma.timeBlock.findUnique({
+      where: { id },
+    });
+
+    if (!existingBlock || existingBlock.userId !== req.userId) {
+      return res.status(404).json({ error: 'Time block not found' });
+    }
+
+    const timeBlock = await prisma.timeBlock.update({
+      where: { id },
+      data: {
+        title,
+        type,
+        date,
+        startTime,
+        endTime,
+        location,
+        description,
+        color,
+      },
+    });
+
+    res.json({ timeBlock });
+  } catch (error) {
+    console.error('Update time block error:', error);
+    res.status(500).json({ error: 'Failed to update time block' });
+  }
+});
+
+// Delete time block
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if time block belongs to user
+    const existingBlock = await prisma.timeBlock.findUnique({
+      where: { id },
+    });
+
+    if (!existingBlock || existingBlock.userId !== req.userId) {
+      return res.status(404).json({ error: 'Time block not found' });
+    }
+
+    await prisma.timeBlock.delete({
+      where: { id },
+    });
+
+    res.json({ message: 'Time block deleted successfully' });
+  } catch (error) {
+    console.error('Delete time block error:', error);
+    res.status(500).json({ error: 'Failed to delete time block' });
   }
 });
 
