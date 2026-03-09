@@ -4,24 +4,17 @@ services:
     volumes:
       - frontend-static:/dist
     command: sh -c "cp -r /usr/src/app/dist/* /dist/"
-    expose:
-      - "80"
+    networks:
+      - todo-network
 
   backend:
     image: todo-backend:active
     env_file:
       - ./backend/.env
-    depends_on:
-      - postgres
     expose:
       - "3000"
-  
-  postgres:
-    image: postgres:16
-    env_file:
-      - ./backend/postgre.env
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - todo-network
 
   nginx:
     image: nginx:alpine
@@ -35,7 +28,12 @@ services:
     depends_on:
       - frontend
       - backend
+    networks:
+      - todo-network
+
+networks:
+  todo-network:
+    external: true
 
 volumes:
-  postgres-data:
   frontend-static:

@@ -13,11 +13,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Task {
+model User {
   id        String   @id @default(uuid())
-  name      String
-  deadline  DateTime
-  status    String
+  username  String   @unique
+  password  String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  timeBlocks     TimeBlock[]
+  personalInfo   PersonalInfo?
 }
 
+model TimeBlock {
+  id          String   @id @default(uuid())
+  title       String
+  type        String
+  date        String
+  startTime   String
+  endTime     String
+  location    String?
+  description String?
+  color       String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model PersonalInfo {
+  id               String   @id @default(uuid())
+  firstName        String
+  lastName         String
+  email            String
+  phone            String
+  studentId        String?
+  dateOfBirth      String?
+  address          String?
+  emergencyContact String?
+  emergencyPhone   String?
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

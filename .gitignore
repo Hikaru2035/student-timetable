@@ -28,3 +28,6 @@ nginx/certs/*
 
 # npm
 npm-debug.log*
+
+#AWS
+aws/
