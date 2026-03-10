@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://10.10.25.13:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://172.20.10.2:3001/api';
 
 class ApiClient {
   constructor() {
@@ -30,7 +30,7 @@ class ApiClient {
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
-      credentials: 'include', // Important for cookies
+      credentials: 'include', 
     };
 
     try {
