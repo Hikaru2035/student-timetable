@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { generateToken, verifyToken } from '../utils/jwt.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,15 +10,15 @@ const prisma = new PrismaClient();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, role } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
+    // Validate role - don't allow admin creation through registration
+    const allowedRoles = ['STUDENT', 'TEACHER'];
+    const userRole = role && allowedRoles.includes(role) ? role : 'STUDENT';
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -36,35 +37,27 @@ router.post('/register', async (req, res) => {
       data: {
         username,
         password: hashedPassword,
+        role: userRole,
       },
       select: {
         id: true,
         username: true,
+        role: true,
         createdAt: true,
       },
     });
 
     // Generate JWT token
-    const token = generateToken({
-      userId: user.id,
-      username: user.username,
-    });
+    const token = generateToken({ userId: user.id });
 
-    // Set token in cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    res.status(201).json({ 
+    res.status(201).json({
+      message: 'User registered successfully',
       user,
       token,
     });
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ error: 'Failed to register user' });
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
@@ -108,9 +101,11 @@ router.post('/login', async (req, res) => {
     });
 
     res.json({
+      message: 'Login successful',
       user: {
         id: user.id,
         username: user.username,
+        role: user.role,
       },
       token,
     });
@@ -127,24 +122,22 @@ router.post('/logout', (req, res) => {
 });
 
 // Get current user
-router.get('/me', async (req, res) => {
+router.get('/me', requireAuth, async (req, res) => {
   try {
-    // Get token from cookie or Authorization header
-    const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
-
-    if (!token) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    // Verify token
-    const decoded = verifyToken(token);
-
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: req.userId },
       select: {
         id: true,
         username: true,
+        role: true,
         createdAt: true,
+        personalInfo: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -154,8 +147,8 @@ router.get('/me', async (req, res) => {
 
     res.json({ user });
   } catch (error) {
-    console.error('Get user error:', error);
-    res.status(401).json({ error: 'Invalid or expired token' });
+    console.error('Get current user error:', error);
+    res.status(500).json({ error: 'Failed to get user information' });
   }
 });
 

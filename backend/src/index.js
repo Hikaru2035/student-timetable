@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import timeBlockRoutes from './routes/timeBlocks.js';
 import personalInfoRoutes from './routes/personalInfo.js';
+import adminRoutes from './routes/admin.js';
+import analyticsRoutes from './routes/analytics.js';
 
 dotenv.config();
 
@@ -15,7 +17,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: [
     "http://localhost:5173",
-    "http://172.20.10.2:5173"
+    "http://192.168.101.189:5173"
   ],
   credentials: true
 }));
@@ -26,6 +28,8 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/timeblocks', timeBlockRoutes);
 app.use('/api/personalinfo', personalInfoRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -38,7 +42,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
 });
