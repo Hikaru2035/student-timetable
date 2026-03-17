@@ -16,14 +16,15 @@ export default function AdminProvision() {
 
   const fetchData = async () => {
     try {
-      const [usersRes, teachersRes, classesRes] = await Promise.all([
+      const [usersRes, classesRes] = await Promise.all([
         api.request('/admin/users'),
-        api.request('/admin/teachers'),
         api.request('/admin/classes'),
       ]);
 
-      setStudents(usersRes.users || []);
-      setTeachers(teachersRes.teachers || []);
+      const users = usersRes.users || [];
+
+      setStudents(users.filter(u => u.role === 'STUDENT'));
+      setTeachers(users.filter(u => u.role === 'TEACHER'));
       setClasses(classesRes.classes || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -34,7 +35,7 @@ export default function AdminProvision() {
 
   const handleDeleteStudent = async (id) => {
     if (!confirm('Are you sure you want to delete this student?')) return;
-    
+
     try {
       await api.request(`/admin/users/${id}`, { method: 'DELETE' });
       setStudents(students.filter(s => s.id !== id));
@@ -45,7 +46,7 @@ export default function AdminProvision() {
 
   const handleDeleteTeacher = async (id) => {
     if (!confirm('Are you sure you want to delete this teacher?')) return;
-    
+
     try {
       await api.request(`/admin/teachers/${id}`, { method: 'DELETE' });
       setTeachers(teachers.filter(t => t.id !== id));
@@ -56,7 +57,7 @@ export default function AdminProvision() {
 
   const handleDeleteClass = async (id) => {
     if (!confirm('Are you sure you want to delete this class?')) return;
-    
+
     try {
       await api.request(`/admin/classes/${id}`, { method: 'DELETE' });
       setClasses(classes.filter(c => c.id !== id));
@@ -145,33 +146,30 @@ export default function AdminProvision() {
             <div className="flex border-b border-gray-200">
               <button
                 onClick={() => setActiveTab('students')}
-                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                  activeTab === 'students'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${activeTab === 'students'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 <Users className="w-4 h-4 inline mr-2" />
                 Students
               </button>
               <button
                 onClick={() => setActiveTab('teachers')}
-                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                  activeTab === 'teachers'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${activeTab === 'teachers'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 <GraduationCap className="w-4 h-4 inline mr-2" />
                 Teachers
               </button>
               <button
                 onClick={() => setActiveTab('classes')}
-                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                  activeTab === 'classes'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${activeTab === 'classes'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 <BookOpen className="w-4 h-4 inline mr-2" />
                 Classes
@@ -208,11 +206,10 @@ export default function AdminProvision() {
                               {student.personalInfo?.email || 'N/A'}
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                student.role === 'ADMIN'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
+                              <span className={`px-2 py-1 text-xs rounded-full ${student.role === 'ADMIN'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-blue-100 text-blue-800'
+                                }`}>
                                 {student.role}
                               </span>
                             </td>
@@ -249,6 +246,7 @@ export default function AdminProvision() {
                           <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Name</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Email</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Phone</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Role</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Department</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Subject</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Classes</th>
@@ -259,10 +257,17 @@ export default function AdminProvision() {
                         {teachers.map((teacher) => (
                           <tr key={teacher.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="px-4 py-3 text-sm text-gray-900">
-                              {teacher.firstName} {teacher.lastName}
+                              {teacher.personalInfo
+                                ? `${teacher.personalInfo.firstName} ${teacher.personalInfo.lastName}`
+                                : teacher.username}
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-600">{teacher.email}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600">{teacher.phone}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{teacher.personalInfo?.email || 'N/A'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{teacher.personalInfo?.phone || 'N/A'}</td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                {teacher.role}
+                              </span>
+                            </td>
                             <td className="px-4 py-3 text-sm text-gray-600">{teacher.department || 'N/A'}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{teacher.subject || 'N/A'}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{teacher._count.classes}</td>
@@ -320,13 +325,12 @@ export default function AdminProvision() {
                             <td className="px-4 py-3 text-sm text-gray-600">{cls.capacity || 'N/A'}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{cls._count.enrollments}</td>
                             <td className="px-4 py-3">
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                cls.status === 'ACTIVE'
-                                  ? 'bg-green-100 text-green-800'
-                                  : cls.status === 'INACTIVE'
+                              <span className={`px-2 py-1 text-xs rounded-full ${cls.status === 'ACTIVE'
+                                ? 'bg-green-100 text-green-800'
+                                : cls.status === 'INACTIVE'
                                   ? 'bg-gray-100 text-gray-800'
                                   : 'bg-blue-100 text-blue-800'
-                              }`}>
+                                }`}>
                                 {cls.status}
                               </span>
                             </td>
