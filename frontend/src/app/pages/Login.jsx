@@ -1,55 +1,44 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Calendar, LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, User, GraduationCap } from 'lucide-react';
 import { api } from '../../utils/api';
 
 export default function Login() {
-  const navigate = useNavigate();
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    confirmPassword: '',
-  });
+  const [isLogin, setIsLogin] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('STUDENT');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      await api.login(formData.username, formData.password);
-      navigate('/');
+      if (isLogin) {
+        const response = await api.login(username, password);
+        
+        // Redirect based on user role
+        if (response.user?.role === 'ADMIN') {
+          navigate('/admin-provision');
+        } else {
+          navigate('/');
+        }
+      } else {
+        const response = await api.register(username, password, role);
+        
+        // Redirect based on user role
+        if (response.user?.role === 'ADMIN') {
+          navigate('/admin-provision');
+        } else {
+          navigate('/');
+        }
+      }
     } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await api.register(formData.username, formData.password);
-      navigate('/');
-    } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -57,60 +46,31 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-white">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Calendar className="w-12 h-12" />
-          </div>
-          <h1 className="text-3xl font-bold text-center mb-2">
-            Student Timetable
-          </h1>
-          <p className="text-blue-100 text-center">
-            Manage your classes and activities
-          </p>
-        </div>
-
-        {/* Form */}
-        <div className="p-8">
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => {
-                setIsRegistering(false);
-                setError('');
-                setFormData({ username: '', password: '', confirmPassword: '' });
-              }}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                !isRegistering
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => {
-                setIsRegistering(true);
-                setError('');
-                setFormData({ username: '', password: '', confirmPassword: '' });
-              }}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                isRegistering
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Register
-            </button>
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <LogIn className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {isLogin ? 'Welcome Back' : 'Create Account'}
+            </h1>
+            <p className="text-gray-600">
+              {isLogin ? 'Login to your account' : 'Register as a new user'}
+            </p>
           </div>
 
+          {/* Error Message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
 
-          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Username */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Username
@@ -118,15 +78,14 @@ export default function Login() {
               <input
                 type="text"
                 required
-                value={formData.username}
-                onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
-                }
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter your username"
               />
             </div>
 
+            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
@@ -134,62 +93,97 @@ export default function Login() {
               <input
                 type="password"
                 required
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter your password"
               />
             </div>
 
-            {isRegistering && (
+            {/* Role Selection - Only show for registration */}
+            {!isLogin && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Register as
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={(e) =>
-                    setFormData({ ...formData, confirmPassword: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Confirm your password"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole('STUDENT')}
+                    className={`flex flex-col items-center gap-2 p-4 border-2 rounded-lg transition-all ${
+                      role === 'STUDENT'
+                        ? 'border-blue-600 bg-blue-50 text-blue-600'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <User className="w-8 h-8" />
+                    <span className="font-medium">Student</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRole('TEACHER')}
+                    className={`flex flex-col items-center gap-2 p-4 border-2 rounded-lg transition-all ${
+                      role === 'TEACHER'
+                        ? 'border-blue-600 bg-blue-50 text-blue-600'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <GraduationCap className="w-8 h-8" />
+                    <span className="font-medium">Teacher</span>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  {role === 'STUDENT' 
+                    ? 'Access your personal timetable and activities'
+                    : 'Manage your classes and student schedules'}
+                </p>
               </div>
             )}
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
-                'Please wait...'
-              ) : isRegistering ? (
                 <>
-                  <UserPlus className="w-5 h-5" />
-                  Create Account
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  {isLogin ? 'Logging in...' : 'Creating account...'}
                 </>
               ) : (
                 <>
-                  <LogIn className="w-5 h-5" />
-                  Sign In
+                  {isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                  {isLogin ? 'Login' : 'Create Account'}
                 </>
               )}
             </button>
           </form>
 
-          {isRegistering && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-900">
-                <strong>Note:</strong> Your data is stored locally on this device.
-                Each student account will have separate timetables and personal information.
-              </p>
-            </div>
-          )}
+          {/* Toggle Login/Register */}
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError('');
+                setRole('STUDENT');
+              }}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              {isLogin
+                ? "Don't have an account? Register"
+                : 'Already have an account? Login'}
+            </button>
+          </div>
+
+          {/* Admin Note */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-xs text-gray-600 text-center">
+              <strong>Note:</strong> Admin accounts must be created separately using the admin creation script.
+            </p>
+          </div>
         </div>
       </div>
     </div>

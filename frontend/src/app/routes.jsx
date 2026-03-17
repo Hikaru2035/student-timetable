@@ -1,8 +1,12 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
+import AdminProvision from "./pages/AdminProvision";
+import DataDashboard from "./pages/DataDashboard";
+import MyClasses from "./pages/MyClasses";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RoleRedirect from "./components/RoleRedirect";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 export const router = createBrowserRouter([
@@ -15,6 +19,15 @@ export const router = createBrowserRouter([
     path: "/",
     element: (
       <ProtectedRoute>
+        <RoleRedirect />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/dashboard",
+    element: (
+      <ProtectedRoute>
         <Dashboard />
       </ProtectedRoute>
     ),
@@ -25,6 +38,33 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <Admin />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/admin-provision",
+    element: (
+      <ProtectedRoute>
+        <AdminProvision />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/data-dashboard",
+    element: (
+      <ProtectedRoute>
+        <DataDashboard />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/my-classes",
+    element: (
+      <ProtectedRoute>
+        <MyClasses />
       </ProtectedRoute>
     ),
     errorElement: <ErrorBoundary />,
