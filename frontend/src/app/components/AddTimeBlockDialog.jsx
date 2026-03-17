@@ -13,10 +13,30 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
   });
 
   if (!isOpen) return null;
+  const timeToMinutes = (time) => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
+    const start = timeToMinutes(formData.startTime);
+    const end = timeToMinutes(formData.endTime);
+
+    const MIN = 7 * 60;
+    const MAX = 21 * 60;
+
+    if (start < MIN || end > MAX) {
+      alert("Time must be between 07:00 and 21:00");
+      return;
+    }
+
+    if (end <= start) {
+      alert("End time must be after start time");
+      return;
+    }
+
     const colorMap = {
       class: 'bg-blue-100 border-blue-300',
       activity: 'bg-green-100 border-green-300',
@@ -32,7 +52,7 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
     };
 
     onAdd(newBlock);
-    
+
     // Reset form
     setFormData({
       title: '',
@@ -43,7 +63,7 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
       location: '',
       description: '',
     });
-    
+
     onClose();
   };
 
@@ -139,6 +159,8 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
                 </label>
                 <input
                   type="time"
+                  min="07:00"
+                  max="21:00"
                   required
                   value={formData.startTime}
                   onChange={(e) => handleChange('startTime', e.target.value)}
@@ -155,6 +177,8 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
                 </label>
                 <input
                   type="time"
+                  min="07:00"
+                  max="21:00"
                   required
                   value={formData.endTime}
                   onChange={(e) => handleChange('endTime', e.target.value)}
@@ -197,13 +221,12 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
             {/* Color Preview */}
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
-              <div className={`p-3 rounded-lg border-l-4 ${
-                formData.type === 'class' ? 'bg-blue-100 border-blue-300' :
+              <div className={`p-3 rounded-lg border-l-4 ${formData.type === 'class' ? 'bg-blue-100 border-blue-300' :
                 formData.type === 'activity' ? 'bg-green-100 border-green-300' :
-                formData.type === 'study' ? 'bg-purple-100 border-purple-300' :
-                formData.type === 'exam' ? 'bg-red-100 border-red-300' :
-                'bg-gray-100 border-gray-300'
-              }`}>
+                  formData.type === 'study' ? 'bg-purple-100 border-purple-300' :
+                    formData.type === 'exam' ? 'bg-red-100 border-red-300' :
+                      'bg-gray-100 border-gray-300'
+                }`}>
                 <p className="font-medium text-sm">{formData.title || 'Your title here'}</p>
                 <p className="text-xs text-gray-600 mt-1">
                   {formData.startTime} - {formData.endTime}

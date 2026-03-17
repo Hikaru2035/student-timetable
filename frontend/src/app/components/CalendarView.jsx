@@ -7,6 +7,11 @@ export default function CalendarView({ timeBlocks, onDelete }) {
   // Ensure timeBlocks is always an array
   const blocks = timeBlocks || [];
 
+  const timeToMinutes = (time) => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+
   // Get the start of the current week (Monday)
   const getWeekStart = (offset = 0) => {
     const today = new Date();
@@ -62,7 +67,7 @@ export default function CalendarView({ timeBlocks, onDelete }) {
     const start = weekDates[0];
     const end = weekDates[6];
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    
+
     if (start.getMonth() === end.getMonth()) {
       return `${months[start.getMonth()]} ${start.getDate()} - ${end.getDate()}, ${start.getFullYear()}`;
     } else {
@@ -84,15 +89,40 @@ export default function CalendarView({ timeBlocks, onDelete }) {
   const calculateBlockPosition = (startTime, endTime) => {
     const [startHour, startMin] = startTime.split(':').map(Number);
     const [endHour, endMin] = endTime.split(':').map(Number);
-    
+
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
     const duration = endMinutes - startMinutes;
-    
+
+    const start = Math.max(startMinutes, 7 * 60);
+    const end = Math.min(endMinutes, 21 * 60);
+
     const top = ((startMinutes - 7 * 60) / 60) * 4; // 4rem per hour
     const height = (duration / 60) * 4;
-    
+
     return { top: `${top}rem`, height: `${height}rem` };
+  };
+
+  const getOverlappingBlocks = (blocks) => {
+    return blocks.map((block, index) => {
+      const startA = timeToMinutes(block.startTime);
+      const endA = timeToMinutes(block.endTime);
+
+      const overlaps = blocks.filter((b) => {
+        if (b.id === block.id) return false;
+
+        const startB = timeToMinutes(b.startTime);
+        const endB = timeToMinutes(b.endTime);
+
+        return startA < endB && endA > startB;
+      });
+
+      return {
+        ...block,
+        overlapCount: overlaps.length + 1,
+        overlapIndex: index,
+      };
+    });
   };
 
   return (
@@ -107,7 +137,7 @@ export default function CalendarView({ timeBlocks, onDelete }) {
             <ChevronLeft className="w-5 h-5" />
             <span className="text-sm">Previous Week</span>
           </button>
-          
+
           <div className="text-center">
             <h2 className="text-lg font-semibold text-gray-900">
               {getWeekRange()}
@@ -147,13 +177,12 @@ export default function CalendarView({ timeBlocks, onDelete }) {
             {weekDates.map((date, index) => {
               const { dayName, dayNum, month } = formatDateDisplay(date);
               const today = isToday(date);
-              
+
               return (
                 <div
                   key={index}
-                  className={`p-4 text-center border-l border-gray-200 ${
-                    today ? 'bg-blue-50' : ''
-                  }`}
+                  className={`p-4 text-center border-l border-gray-200 ${today ? 'bg-blue-50' : ''
+                    }`}
                 >
                   <div className={`text-sm font-medium ${today ? 'text-blue-600' : 'text-gray-900'}`}>
                     {dayName}
@@ -188,11 +217,11 @@ export default function CalendarView({ timeBlocks, onDelete }) {
             {weekDates.map((date, dayIndex) => {
               const dateBlocks = getBlocksForDate(date);
               const today = isToday(date);
-              
+
               return (
                 <div
                   key={dayIndex}
-                  className={`relative border-l border-gray-200 ${today ? 'bg-blue-50/30' : ''}`}
+                  className={`relative overflow-hidden border-l border-gray-200 ${today ? 'bg-blue-50/30' : ''}`}
                 >
                   {/* Time slot grid lines */}
                   {timeSlots.map((time) => (
@@ -203,13 +232,17 @@ export default function CalendarView({ timeBlocks, onDelete }) {
                   ))}
 
                   {/* Time blocks */}
-                  {dateBlocks.map((block) => {
+                  {getOverlappingBlocks(dateBlocks).map((block) => {
                     const position = calculateBlockPosition(block.startTime, block.endTime);
                     return (
                       <div
                         key={block.id}
-                        className={`absolute left-1 right-1 ${block.color} border-l-4 rounded-lg p-2 overflow-hidden group`}
-                        style={position}
+                        className={`absolute ${block.color} border-l-4 rounded-lg p-2 overflow-hidden group`}
+                        style={{
+                          ...calculateBlockPosition(block.startTime, block.endTime),
+                          width: `${100 / block.overlapCount}%`,
+                          left: `${(block.overlapIndex % block.overlapCount) * (100 / block.overlapCount)}%`
+                        }}
                       >
                         <div className="flex justify-between items-start gap-2">
                           <div className="flex-1 min-w-0">
