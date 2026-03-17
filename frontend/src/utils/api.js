@@ -1,24 +1,28 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://172.20.10.2:3001/api';
-
 class ApiClient {
   constructor() {
-    this.baseURL = API_URL;
-    this.token = localStorage.getItem('token');
+    // Safely access import.meta.env with fallback
+    const apiUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) 
+      ? import.meta.env.VITE_API_URL 
+      : 'http://172.16.220.86:3001/api';
+    
+    this.baseURL = apiUrl;
+    this.tokenKey = 'auth_token';
   }
 
   setToken(token) {
     this.token = token;
     if (token) {
-      localStorage.setItem('token', token);
+      localStorage.setItem(this.tokenKey, token);
     } else {
-      localStorage.removeItem('token');
+      localStorage.removeItem(this.tokenKey);
     }
   }
 
   getToken() {
-    return this.token || localStorage.getItem('token');
+    return this.token || localStorage.getItem(this.tokenKey);
   }
 
+  // Generic request method for any endpoint
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const token = this.getToken();
@@ -30,7 +34,7 @@ class ApiClient {
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
-      credentials: 'include', // Important for cookies
+      credentials: 'include',
     };
 
     try {
@@ -38,7 +42,6 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        // If unauthorized, clear token
         if (response.status === 401) {
           this.setToken(null);
         }
@@ -52,10 +55,10 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async register(username, password) {
+  async register(username, password, role = 'STUDENT') {
     const data = await this.request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, role }),
     });
     
     if (data.token) {
