@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, User, Mail, Phone, MapPin, Calendar } from 'lucide-react';
+import { Save, User, Mail, Phone, MapPin, Calendar, Briefcase } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { api } from '../../utils/api';
 
@@ -14,15 +14,31 @@ export default function Admin() {
     address: '',
     emergencyContact: '',
     emergencyPhone: '',
+    department: '',
+    position: '',
   });
+
+  const [userRole, setUserRole] = useState(null);
 
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    fetchUser();
     fetchPersonalInfo();
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const user = await api.getCurrentUser();
+      console.log("CURRENT USER:", user);
+      console.log("ROLE:", user.role);
+      setUserRole(user.role);
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+    }
+  };
 
   const fetchPersonalInfo = async () => {
     try {
@@ -189,37 +205,41 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* Student Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Student ID
-                  </label>
-                  <input
-                    type="text"
-                    value={personalInfo.studentId}
-                    onChange={(e) => handleChange('studentId', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="STU123456"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      Date of Birth
+              {userRole === 'student' && (
+                <>
+                  {/* Student Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Student ID
+                      </label>
+                      <input
+                        type="text"
+                        value={personalInfo.studentId}
+                        onChange={(e) => handleChange('studentId', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="STU123456"
+                      />
                     </div>
-                  </label>
-                  <input
-                    type="date"
-                    value={personalInfo.dateOfBirth}
-                    onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
 
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Date of Birth
+                        </div>
+                      </label>
+                      <input
+                        type="date"
+                        value={personalInfo.dateOfBirth}
+                        onChange={(e) => handleChange('dateOfBirth', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              
               {/* Address */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

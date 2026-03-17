@@ -40,10 +40,6 @@ model User {
 
 model Teacher {
   id          String   @id @default(uuid())
-  firstName   String
-  lastName    String
-  email       String   @unique
-  phone       String
   department  String?
   subject     String?
   createdAt   DateTime @default(now())
