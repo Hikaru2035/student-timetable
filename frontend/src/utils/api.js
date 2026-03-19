@@ -3,7 +3,7 @@ class ApiClient {
     // Safely access import.meta.env with fallback
     const apiUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) 
       ? import.meta.env.VITE_API_URL 
-      : 'http://172.16.220.86:3001/api';
+      : 'http://10.10.25.13:3001/api';
     
     this.baseURL = apiUrl;
     this.tokenKey = 'auth_token';
