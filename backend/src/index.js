@@ -7,6 +7,8 @@ import timeBlockRoutes from './routes/timeBlocks.js';
 import personalInfoRoutes from './routes/personalInfo.js';
 import adminRoutes from './routes/admin.js';
 import analyticsRoutes from './routes/analytics.js';
+import { requestLogger } from './middleware/requestLogger.js';
+
 
 dotenv.config();
 
@@ -29,6 +31,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(requestLogger);
 
 app.get('/healthz', (req, res) => {
   res.status(200).json({ status: 'ok' });
