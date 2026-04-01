@@ -1,7 +1,7 @@
-import { Clock, MapPin, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, MapPin, Trash2, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { useState } from 'react';
 
-export default function CalendarView({ timeBlocks, onDelete }) {
+export default function CalendarView({ timeBlocks, onDelete, onEdit }) {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
 
   // Ensure timeBlocks is always an array
@@ -262,12 +262,23 @@ export default function CalendarView({ timeBlocks, onDelete }) {
                               </div>
                             )}
                           </div>
-                          <button
-                            onClick={() => onDelete(block.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
+                          <div className="flex flex-col gap-1">
+                            {/* Edit */}
+                            <button
+                              onClick={() => onEdit(block)}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-blue-100 rounded transition-opacity"
+                            >
+                              <Pencil className="w-4 h-4 text-blue-600" />
+                            </button>
+
+                            {/* Delete */}
+                            <button
+                              onClick={() => onDelete(block.id)}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </button>
+                          </div>
                         </div>
                         {block.description && (
                           <p className="text-xs text-gray-600 mt-1 line-clamp-2">

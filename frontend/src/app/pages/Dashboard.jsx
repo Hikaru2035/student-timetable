@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [timeBlocks, setTimeBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingBlock, setEditingBlock] = useState(null);
 
   useEffect(() => {
     fetchTimeBlocks();
@@ -26,13 +27,24 @@ export default function Dashboard() {
     }
   };
 
-  const handleAddTimeBlock = async (newBlock) => {
+  const handleSaveTimeBlock = async (block) => {
     try {
-      const { timeBlock } = await api.createTimeBlock(newBlock);
-      setTimeBlocks([...(timeBlocks || []), timeBlock]);
+      if (editingBlock) {
+        const { timeBlock } = await api.updateTimeBlock(editingBlock.id, block);
+
+        setTimeBlocks(prev =>
+          prev.map(tb => tb.id === editingBlock.id ? timeBlock : tb)
+        );
+      } else {
+        const { timeBlock } = await api.createTimeBlock(block);
+        setTimeBlocks(prev => [...prev, timeBlock]);
+      }
+
+      setEditingBlock(null);
+      setIsDialogOpen(false);
     } catch (error) {
-      console.error('Failed to create time block:', error);
-      alert('Failed to create time block. Please try again.');
+      console.error('Failed to save time block:', error);
+      alert('Failed to save time block');
     }
   };
 
@@ -136,14 +148,22 @@ export default function Dashboard() {
           <CalendarView
             timeBlocks={timeBlocks}
             onDelete={handleDeleteTimeBlock}
+            onEdit={(block) => {
+              setEditingBlock(block);
+              setIsDialogOpen(true);
+            }}
           />
         </div>
       </div>
 
       <AddTimeBlockDialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onAdd={handleAddTimeBlock}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setEditingBlock(null);
+        }}
+        onAdd={handleSaveTimeBlock}
+        initialData={editingBlock}
       />
     </div>
   );

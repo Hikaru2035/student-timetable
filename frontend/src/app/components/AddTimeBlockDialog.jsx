@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Calendar, Clock, MapPin, FileText, Tag } from 'lucide-react';
 
-export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
-  const [formData, setFormData] = useState({
+export default function AddTimeBlockDialog({ isOpen, onClose, onAdd, initialData }) {
+  const defaultForm = {
     title: '',
     type: 'class',
     date: '',
@@ -10,9 +10,28 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
     endTime: '10:00',
     location: '',
     description: '',
-  });
+  };
+
+  const [formData, setFormData] = useState(defaultForm);
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title || '',
+        type: initialData.type || 'class',
+        date: initialData.date || '',
+        startTime: initialData.startTime || '09:00',
+        endTime: initialData.endTime || '10:00',
+        location: initialData.location || '',
+        description: initialData.description || '',
+      });
+    } else {
+      setFormData(defaultForm);
+    }
+  }, [initialData]);
 
   if (!isOpen) return null;
+
   const timeToMinutes = (time) => {
     const [h, m] = time.split(':').map(Number);
     return h * 60 + m;
@@ -54,16 +73,7 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
     onAdd(newBlock);
 
     // Reset form
-    setFormData({
-      title: '',
-      type: 'class',
-      date: '',
-      startTime: '09:00',
-      endTime: '10:00',
-      location: '',
-      description: '',
-    });
-
+    setFormData(defaultForm);
     onClose();
   };
 
@@ -71,7 +81,6 @@ export default function AddTimeBlockDialog({ isOpen, onClose, onAdd }) {
     setFormData({ ...formData, [field]: value });
   };
 
-  // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
 
   return (
