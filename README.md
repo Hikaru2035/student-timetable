@@ -27,3 +27,5 @@ A full-stack web application for managing student timetables with user authentic
 - JWT Authentication
 - Bcrypt (password hashing)
 - Cookie-based token storage
+
+Testing Webhook
