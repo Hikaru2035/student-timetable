@@ -1,147 +1,80 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        DEPLOY_DIR   = "/home/dev/todo-api"
-        BUILD_TAG_ID = "build-${BUILD_NUMBER}"
+  environment {
+    AWS_REGION = 'ap-southeast-1'
+    AWS_ACCOUNT_ID = '153860374757'
+    EKS_CLUSTER = 'student-timetable-prod'
+    ECR_BACKEND = 'student-timetable-backend'
+    ECR_FRONTEND = 'student-timetable-frontend'
+    BACKEND_IMAGE = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND}"
+    FRONTEND_IMAGE = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}"
+    IMAGE_TAG = "${env.BUILD_NUMBER}"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    stages {
-
-        stage('Prepare Workspace') {
-            steps {
-                sh '''
-                    set -e
-                    cd $DEPLOY_DIR
-                '''
-            }
-        }
-
-        stage('Install & Build App') {
-            steps {
-                sh '''
-                    set -e
-                    cd $DEPLOY_DIR
-
-                    echo "Backend install"
-                    cd backend
-                    npm ci
-                    npm run build
-
-                    echo "Frontend build"
-                    cd ../frontend
-                    npm ci
-                    npm run build
-                '''
-            }
-        }
-
-        stage('Build Docker Images') {
-            steps {
-                sh '''
-                    set -e
-                    cd $DEPLOY_DIR
-
-                    echo "Build backend image"
-                    docker build -t todo-backend:${BUILD_TAG_ID} backend
-
-                    echo "Build frontend image"
-                    docker build -t todo-frontend:${BUILD_TAG_ID} frontend
-                '''
-            }
-        }
-
-        stage('Backup Current Active → Stable') {
-            steps {
-                sh '''
-                    set -e
-                    echo "Backup active images → stable"
-
-                    docker image inspect todo-backend:active >/dev/null 2>&1 \
-                      && docker tag todo-backend:active todo-backend:stable || true
-
-                    docker image inspect todo-frontend:active >/dev/null 2>&1 \
-                      && docker tag todo-frontend:active todo-frontend:stable || true
-                '''
-            }
-        }
-
-        stage('Promote Build → Active') {
-            steps {
-                sh '''
-                    set -e
-                    echo "Promote build → active"
-
-                    docker tag todo-backend:${BUILD_TAG_ID} todo-backend:active
-                    docker tag todo-frontend:${BUILD_TAG_ID} todo-frontend:active
-                '''
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh '''
-                    set -e
-                    cd $DEPLOY_DIR
-
-                    echo "Deploy active images"
-                    docker-compose -f docker-compose.prod.yaml up -d
-                '''
-            }
-        }
-    }
-
-    post {
-
-        failure {
-            echo "PIPELINE FAILED – CLEANUP FAILED BUILD IMAGES"
-
-            sh '''
-                docker image inspect todo-backend:${BUILD_TAG_ID} >/dev/null 2>&1 \
-                && docker rmi -f todo-backend:${BUILD_TAG_ID} || true
-
-                docker image inspect todo-frontend:${BUILD_TAG_ID} >/dev/null 2>&1 \
-                && docker rmi -f todo-frontend:${BUILD_TAG_ID} || true
-            '''
-
-            echo "ROLLBACK TO STABLE"
-
-            sh '''
-                set -e
-                cd $DEPLOY_DIR
-
-                docker image inspect todo-backend:stable >/dev/null 2>&1 || {
-                    echo "No stable backend image – rollback impossible"
-                    exit 1
-                }
-
-                docker tag todo-backend:stable todo-backend:active
-                docker tag todo-frontend:stable todo-frontend:active
-
-                docker-compose -f docker-compose.prod.yaml up -d
-            '''
-        }
-
-        success {
-            echo "DEPLOY SUCCESS – ${BUILD_TAG_ID}"
-            echo "Cleaning old images"
-
-            
-            sh '''
-            docker images todo-backend --format '{{.Tag}}' \
-            | grep '^build-' \
-            | sort -V \
-            | head -n -5 \
-            | awk '{print "todo-backend:"$1}' \
-            | xargs -r docker rmi || true
-
-            docker images todo-frontend --format '{{.Tag}}' \
-            | grep '^build-' \
-            | sort -V \
-            | head -n -5 \
-            | awk '{print "todo-frontend:"$1}' \
-            | xargs -r docker rmi || true
+    stage('Verify Tools') {
+      steps {
+        sh '''
+          aws --version
+          docker version
+          kubectl version --client
+          helm version
         '''
-        }
+      }
     }
+
+    stage('Login ECR') {
+      steps {
+        sh '''
+          aws ecr get-login-password --region ${AWS_REGION} | \
+          docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+        '''
+      }
+    }
+
+    stage('Build Images') {
+      steps {
+        sh '''
+          docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} ./backend
+          docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} ./frontend
+        '''
+      }
+    }
+
+    stage('Push Images') {
+      steps {
+        sh '''
+          docker push ${BACKEND_IMAGE}:${IMAGE_TAG}
+          docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
+        '''
+      }
+    }
+
+    stage('Deploy to EKS') {
+      steps {
+        sh '''
+          aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER}
+
+          kubectl -n app set image deployment/backend backend=${BACKEND_IMAGE}:${IMAGE_TAG}
+          kubectl -n app set image deployment/frontend frontend=${FRONTEND_IMAGE}:${IMAGE_TAG}
+
+          kubectl -n app rollout status deployment/backend --timeout=300s
+          kubectl -n app rollout status deployment/frontend --timeout=300s
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      sh 'docker image prune -af || true'
+    }
+  }
 }
