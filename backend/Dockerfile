@@ -1,27 +1,28 @@
-# ===== BUILD STAGE =====
-FROM node:20-alpine AS build
+FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci
 
-COPY . .
-
-RUN node -c index.js
-
-RUN npx prisma generate
-
-FROM node:20-alpine
+FROM node:20-alpine AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=3001
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/index.js ./index.js
-COPY --from=build /app/prisma ./prisma
+RUN npx prisma generate \
+ && npm prune --omit=dev \
+ && npm cache clean --force
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node index.js"]
+RUN addgroup -g 1001 -S nodejs \
+ && adduser -S appuser -u 1001
+
+USER appuser
+
+EXPOSE 3001
+
+CMD ["node", "src/index.js"]
