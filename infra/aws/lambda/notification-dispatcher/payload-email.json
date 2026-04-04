@@ -1,0 +1,6 @@
+{
+  "channel": "email",
+  "userIds": ["e2311be6-e957-442f-a411-2e21829b82a9"],
+  "subject": "Test SES",
+  "message": "Hello from Lambda"
+}

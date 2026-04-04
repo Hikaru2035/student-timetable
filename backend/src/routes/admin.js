@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/admin.js';
+import { invokeNotificationLambda } from '../services/notificationLambda.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -87,6 +88,36 @@ router.delete('/users/:id', async (req, res) => {
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+
+// Send notifications through Lambda
+router.post('/notifications/send', async (req, res) => {
+  try {
+    const { channel, message, subject, roles, userIds } = req.body;
+
+    if (!channel || !message) {
+      return res.status(400).json({ error: 'channel and message are required' });
+    }
+
+    if (!['sms', 'email'].includes(channel)) {
+      return res.status(400).json({ error: 'channel must be sms or email' });
+    }
+
+    const result = await invokeNotificationLambda({
+      channel,
+      message,
+      subject,
+      roles,
+      userIds,
+      requestedBy: req.userId,
+    });
+
+    res.json({ result });
+  } catch (error) {
+    console.error('Send notifications error:', error);
+    res.status(500).json({ error: error.message || 'Failed to send notifications' });
   }
 });
 

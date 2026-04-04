@@ -1,0 +1,10 @@
+{
+  "name": "notification-dispatcher-runtime",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.901.0",
+    "@aws-sdk/client-sns": "^3.901.0",
+    "@prisma/client": "^6.19.1"
+  }
+}
