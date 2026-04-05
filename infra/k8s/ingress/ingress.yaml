@@ -7,10 +7,13 @@ metadata:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-southeast-1:153860374757:certificate/c62e8e62-f754-4eda-8dd5-1409eb2d6ed9
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
 spec:
   rules:
-    - http:
+    - host: phungngocdiep05.id.vn
+      http:
         paths:
           - path: /api
             pathType: Prefix
