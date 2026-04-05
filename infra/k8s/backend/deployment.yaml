@@ -46,6 +46,16 @@ spec:
                 secretKeyRef:
                   name: backend-env
                   key: CORS_ORIGIN
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: backend-env
+                  key: AWS_REGION
+            - name: NOTIFICATION_LAMBDA_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: backend-env
+                  key: NOTIFICATION_LAMBDA_NAME
           livenessProbe:
             httpGet:
               path: /healthz
