@@ -34,9 +34,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  timeBlocks     TimeBlock[]
-  personalInfo   PersonalInfo?
-  enrollments    Enrollment[]
+  timeBlocks              TimeBlock[]
+  personalInfo            PersonalInfo?
+  enrollments             Enrollment[]
+  notificationDeliveries  NotificationDelivery[]
 }
 
 model Teacher {
@@ -94,6 +95,8 @@ model TimeBlock {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  notificationDeliveries NotificationDelivery[]
+
   @@index([userId, date])
 }
 
@@ -112,4 +115,20 @@ model PersonalInfo {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model NotificationDelivery {
+  id          String   @id @default(uuid())
+  userId      String
+  timeBlockId String
+  channel     String
+  type        String
+  sentAt      DateTime @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBlock   TimeBlock @relation(fields: [timeBlockId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, timeBlockId, channel, type])
+  @@index([timeBlockId])
+  @@index([userId])
 }
