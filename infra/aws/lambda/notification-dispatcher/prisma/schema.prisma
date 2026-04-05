@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum ClassStatus {
+  ACTIVE
+  INACTIVE
+  COMPLETED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  timeBlocks     TimeBlock[]
+  personalInfo   PersonalInfo?
+  enrollments    Enrollment[]
+}
+
+model Teacher {
+  id          String   @id @default(uuid())
+  department  String?
+  subject     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classes     Class[]
+}
+
+model Class {
+  id          String       @id @default(uuid())
+  name        String
+  code        String       @unique
+  description String?
+  schedule    String?
+  room        String?
+  capacity    Int?
+  status      ClassStatus  @default(ACTIVE)
+  teacherId   String?
+  teacher     Teacher?     @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  userId    String
+  classId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  enrolledAt DateTime @default(now())
+
+  @@unique([userId, classId])
+  @@index([userId])
+  @@index([classId])
+}
+
+model TimeBlock {
+  id          String   @id @default(uuid())
+  title       String
+  type        String
+  date        String
+  startTime   String
+  endTime     String
+  location    String?
+  description String?
+  color       String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model PersonalInfo {
+  id               String   @id @default(uuid())
+  firstName        String
+  lastName         String
+  email            String
+  phone            String
+  studentId        String?
+  dateOfBirth      String?
+  address          String?
+  emergencyContact String?
+  emergencyPhone   String?
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

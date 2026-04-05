@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Student Timetable",
+    "slug": "student-timetable-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.studenttimetable.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.studenttimetable.mobile"
+    },
+    "extra": {
+      "apiUrl": "http://localhost:3001/api",
+      "eas": {
+        "projectId": "b4f502ee-3e0a-4985-951a-3b0fb93dc212"
+      }
+    }
+  }
+}
