@@ -1,0 +1,6 @@
+{
+  "mode": "timeblock_reminders",
+  "channel": "email",
+  "minutesAhead": 30,
+  "lookbackMinutes": 5
+}
