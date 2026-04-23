@@ -28,3 +28,6 @@ A full-stack web application for managing student timetables with user authentic
 - Bcrypt (password hashing)
 - Cookie-based token storage
 
+### Video
+
+- https://buveduvn0-my.sharepoint.com/personal/diep_pn_st_buv_edu_vn/_layouts/15/guestaccess.aspx?share=IQBCSAF9awXXRIFXqOjVVLFyAb2_1h0mFyqdBqnZCku7j5Q&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=E7S8NZ
