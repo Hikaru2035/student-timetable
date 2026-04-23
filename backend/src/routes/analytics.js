@@ -76,7 +76,6 @@ router.get('/users/registrations', async (req, res) => {
       orderBy: { createdAt: 'asc' },
     });
 
-    // Group by month
     const monthlyData = users.reduce((acc, user) => {
       const month = new Date(user.createdAt).toLocaleDateString('en-US', { 
         year: 'numeric', 
