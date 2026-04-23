@@ -49,7 +49,6 @@ router.post('/', async (req, res) => {
     let personalInfo;
 
     if (existing) {
-      // Update existing
       personalInfo = await prisma.personalInfo.update({
         where: { userId: req.userId },
         data: {
@@ -65,7 +64,6 @@ router.post('/', async (req, res) => {
         },
       });
     } else {
-      // Create new
       personalInfo = await prisma.personalInfo.create({
         data: {
           firstName,

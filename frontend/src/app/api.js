@@ -38,7 +38,6 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        // If unauthorized, clear token
         if (response.status === 401) {
           this.setToken(null);
         }

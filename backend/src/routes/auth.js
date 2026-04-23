@@ -47,7 +47,6 @@ router.post('/register', async (req, res) => {
       },
     });
 
-    // Generate JWT token
     const token = generateToken({ userId: user.id });
 
     res.status(201).json({
@@ -78,21 +77,17 @@ router.post('/login', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-
-    // Check password
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate JWT token
     const token = generateToken({
       userId: user.id,
       username: user.username,
     });
 
-    // Set token in cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

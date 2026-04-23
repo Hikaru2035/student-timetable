@@ -17,7 +17,6 @@ export default function ProtectedRoute({ children }) {
 
       try {
         const { user } = await api.getCurrentUser();
-        console.log('Protected route - user:', user); // Debug log
         setIsAuthenticated(true);
         setUserRole(user.role);
       } catch (error) {

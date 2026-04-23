@@ -13,7 +13,6 @@ const question = (query) => new Promise((resolve) => rl.question(query, resolve)
 
 async function createAdminAccount() {
   try {
-    console.log('\n🔐 Admin Account Creation\n');
 
     const username = await question('Enter admin username: ');
     const password = await question('Enter admin password: ');
@@ -29,9 +28,7 @@ async function createAdminAccount() {
     });
 
     if (existingUser) {
-      console.error(`❌ User "${username}" already exists`);
-      console.log('\n💡 Tip: Use the promote-to-admin script instead:\n');
-      console.log(`   node server/scripts/promoteToAdmin.js ${username}\n`);
+      console.error(`User "${username}" already exists`);
       process.exit(1);
     }
 
@@ -53,17 +50,8 @@ async function createAdminAccount() {
       },
     });
 
-    console.log('\n✅ Admin account created successfully!\n');
-    console.log('Account Details:');
-    console.log('─────────────────────────────');
-    console.log(`Username: ${admin.username}`);
-    console.log(`Role: ${admin.role}`);
-    console.log(`Created: ${admin.createdAt}`);
-    console.log('─────────────────────────────\n');
-    console.log('🎉 You can now login with these credentials!\n');
-
   } catch (error) {
-    console.error('❌ Error creating admin account:', error.message);
+    console.error('Error creating admin account:', error.message);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

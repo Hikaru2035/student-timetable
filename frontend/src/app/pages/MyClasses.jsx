@@ -13,7 +13,6 @@ export default function MyClasses() {
 
   const fetchClasses = async () => {
     try {
-      // For now, just show all classes - in a real app, filter by teacher
       const { classes } = await api.request('/admin/classes');
       setClasses(classes || []);
     } catch (error) {

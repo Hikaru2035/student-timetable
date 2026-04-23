@@ -13,7 +13,6 @@ router.use(requireAdmin);
 
 // ==================== USERS/STUDENTS ====================
 
-// Get all users/students
 router.get('/users', async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -123,7 +122,6 @@ router.post('/notifications/send', async (req, res) => {
 
 // ==================== TEACHERS ====================
 
-// Get all teachers
 router.get('/teachers', async (req, res) => {
   try {
     const teachers = await prisma.teacher.findMany({
@@ -215,7 +213,6 @@ router.delete('/teachers/:id', async (req, res) => {
 
 // ==================== CLASSES ====================
 
-// Get all classes
 router.get('/classes', async (req, res) => {
   try {
     const classes = await prisma.class.findMany({
@@ -318,7 +315,6 @@ router.delete('/classes/:id', async (req, res) => {
 
 // ==================== ENROLLMENTS ====================
 
-// Enroll student in class
 router.post('/enrollments', async (req, res) => {
   try {
     const { userId, classId } = req.body;
